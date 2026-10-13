@@ -56,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
@@ -116,6 +117,9 @@ import kotlin.math.ceil
  * scroll, so no screen has to report it), and touches on open sky reach it. A touch that a card,
  * toggle or button has already taken is left alone.
  */
+/** The widest the content gets: about a large phone. Beyond this, it centres and the sky shows around it. */
+val CONTENT_MAX_WIDTH = 560.dp
+
 @Composable
 fun SkyBackground(
     sky: Sky,
@@ -184,7 +188,11 @@ fun SkyBackground(
                     ),
             )
             if (sceneOn) SceneLayer(sky, input, Modifier.fillMaxSize().graphicsLayer { alpha = if (calm) 0.5f else 1f })
-            content()
+            // On wide screens (an unfolded Fold, a tablet) the content stays a phone-width column in the
+            // middle while the sky fills the whole screen. Phones are narrower than this, so unchanged.
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                Box(Modifier.fillMaxHeight().widthIn(max = CONTENT_MAX_WIDTH).fillMaxWidth(), content = content)
+            }
         }
     }
 }
