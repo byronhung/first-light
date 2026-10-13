@@ -285,7 +285,7 @@ fun SettingsScreen(
                             )
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            AmberButton("Scan a new code", onScan, Modifier.weight(1f))
+                            AmberButton("Scan a code", onScan, Modifier.weight(1f))
                             QuietButton("Remove", { viewModel.setCode(null) }, Modifier.weight(1f))
                         }
                     } else {

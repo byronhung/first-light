@@ -97,12 +97,21 @@ class SceneInput {
  * Everything runs off one clock in seconds, so each effect is a function of time and nothing piles
  * up across recompositions. Sunrise has no layer: its sun glow lives in [SkyBackground].
  */
+private const val FRAME_MS = 32L
+
 @Composable
 fun SceneLayer(sky: Sky, input: SceneInput, modifier: Modifier = Modifier) {
     if (sky.scene == Scene.SUN) return
     val seconds by produceState(0f) {
+        // Capped at about 30 fps: the skies drift slowly, so 60 fps only costs battery.
         val start = withFrameMillis { it }
-        while (true) withFrameMillis { value = (it - start) / 1000f }
+        var last = start
+        while (true) withFrameMillis {
+            if (it - last >= FRAME_MS) {
+                last = it
+                value = (it - start) / 1000f
+            }
+        }
     }
     Canvas(modifier) {
         val t = seconds

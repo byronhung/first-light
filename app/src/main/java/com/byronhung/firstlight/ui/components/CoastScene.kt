@@ -152,7 +152,9 @@ internal fun DrawScope.coast(w: Float, h: Float, t: Float, phase: Phase, horizon
     }
     drawPath(headland, land)
     val lx = w * 0.14f
-    val ly = horizon + 6 - h * 0.06f
+    // Stand the tower on the headland's surface at lx, sunk a little so no sky shows under it.
+    val ln = 0.14f / 0.42f
+    val ly = horizon + 6 - (1 - ln).pow(1.6f) * h * 0.07f - sin(ln * 13) * 2 * (1 - ln) + 2
     val tower = Path().apply {
         moveTo(lx - 5, ly)
         lineTo(lx + 5, ly)

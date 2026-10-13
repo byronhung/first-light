@@ -505,7 +505,7 @@ fun WheelColumn(
  * Rose is used here and nowhere else, because this is the one place the app costs you something.
  */
 @Composable
-fun HoldToGiveUp(holdMs: Long, onGiveUp: () -> Unit, modifier: Modifier = Modifier) {
+fun HoldToGiveUp(holdMs: Long, onGiveUp: () -> Unit, modifier: Modifier = Modifier, compact: Boolean = false) {
     var pressed by remember { mutableStateOf(false) }
     val progress = remember { Animatable(0f) }
     val latest by rememberUpdatedState(onGiveUp)
@@ -535,7 +535,7 @@ fun HoldToGiveUp(holdMs: Long, onGiveUp: () -> Unit, modifier: Modifier = Modifi
                     scaleX = scale
                     scaleY = scale
                 }
-                .size(84.dp)
+                .size(if (compact) 52.dp else 84.dp)
                 .clip(CircleShape)
                 .background(Color(0xFF160C2A).copy(alpha = 0.45f))
                 .pointerInput(Unit) {
@@ -547,8 +547,8 @@ fun HoldToGiveUp(holdMs: Long, onGiveUp: () -> Unit, modifier: Modifier = Modifi
                     }
                 }
                 .drawBehind {
-                    val stroke = 5.dp.toPx()
-                    val inset = 6.dp.toPx() + stroke / 2
+                    val stroke = (if (compact) 3.5f else 5f).dp.toPx()
+                    val inset = (if (compact) 4 else 6).dp.toPx() + stroke / 2
                     val arcSize = size.copy(width = size.width - inset * 2, height = size.height - inset * 2)
                     val topLeft = Offset(inset, inset)
                     drawArc(Color(0x33FFF6EC), 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
@@ -559,7 +559,7 @@ fun HoldToGiveUp(holdMs: Long, onGiveUp: () -> Unit, modifier: Modifier = Modifi
         ) {
             Text(
                 (if (pressed) left else totalSeconds).toString(),
-                style = AppText.header.copy(fontSize = 22.sp, fontWeight = FontWeight.Normal),
+                style = AppText.header.copy(fontSize = if (compact) 16.sp else 22.sp, fontWeight = FontWeight.Normal),
                 color = Sun.OnGlass,
             )
         }

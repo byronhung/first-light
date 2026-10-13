@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
@@ -46,6 +48,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -182,46 +185,57 @@ private fun RingScreen(
         roundStart = SystemClock.elapsedRealtime()
     }
 
+    // Short screens (a flip phone's cover screen, a phone in landscape) get a one-line header and a
+    // smaller give-up control, so the puzzle keeps as much room as it can.
+    BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
+    val compact = maxHeight < COMPACT_HEIGHT
+    // A scan-only alarm is one step, not "round 1 of 1".
+    val scanOnly = rounds == listOf(RoundType.QR_SCAN)
+    val roundLabel = if (scanOnly) "SCAN YOUR CODE TO STOP IT" else "ROUND ${index + 1} OF ${rounds.size}"
+    // Without this, nobody finds out that tapping silences it: on the scan round there's
+    // nothing to tap.
+    val quietHint = if (quiet) "Quiet while you keep tapping" else "Tap the screen to quiet it"
     Column(
         Modifier
             .fillMaxSize()
-            .safeDrawingPadding()
-            .padding(start = 24.dp, end = 24.dp, top = 30.dp, bottom = 22.dp),
+            .padding(start = if (compact) 18.dp else 24.dp, end = if (compact) 18.dp else 24.dp, top = if (compact) 8.dp else 30.dp, bottom = if (compact) 8.dp else 22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(clockDigits(now.hour, now.minute, is24Hour), style = AppText.ringClock, color = Sun.OnGlass)
-            if (!is24Hour) {
-                Text(period(now.hour), style = AppText.period.copy(fontSize = 20.sp), color = Sun.OnGlass.copy(alpha = 0.75f), modifier = Modifier.padding(bottom = 10.dp))
+        if (compact) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(clockDigits(now.hour, now.minute, is24Hour), style = AppText.ringClock.copy(fontSize = 36.sp, lineHeight = 36.sp), color = Sun.OnGlass)
+                    if (!is24Hour) {
+                        Text(period(now.hour), style = AppText.period.copy(fontSize = 13.sp), color = Sun.OnGlass.copy(alpha = 0.75f), modifier = Modifier.padding(bottom = 4.dp))
+                    }
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(roundLabel, style = AppText.label.copy(letterSpacing = 0.14.em), color = Sun.OnGlass.copy(alpha = 0.7f))
+                    Text(quietHint, style = AppText.caption.copy(fontSize = 12.sp), color = Sun.OnGlass.copy(alpha = if (quiet) 0.55f else 0.85f))
+                }
             }
+        } else {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(clockDigits(now.hour, now.minute, is24Hour), style = AppText.ringClock, color = Sun.OnGlass)
+                if (!is24Hour) {
+                    Text(period(now.hour), style = AppText.period.copy(fontSize = 20.sp), color = Sun.OnGlass.copy(alpha = 0.75f), modifier = Modifier.padding(bottom = 10.dp))
+                }
+            }
+            Text(session.label.ifBlank { "Alarm" }, style = AppText.caption.copy(fontSize = 15.sp), color = Sun.OnGlass.copy(alpha = 0.75f))
+            Spacer(Modifier.height(20.dp))
+            if (!scanOnly) {
+                Pips(done = index, total = rounds.size)
+                Spacer(Modifier.height(10.dp))
+            }
+            Text(roundLabel, style = AppText.label.copy(letterSpacing = 0.18.em), color = Sun.OnGlass.copy(alpha = 0.7f))
+            Text(quietHint, style = AppText.caption, color = Sun.OnGlass.copy(alpha = if (quiet) 0.55f else 0.85f), modifier = Modifier.padding(top = 6.dp))
         }
-        Text(session.label.ifBlank { "Alarm" }, style = AppText.caption.copy(fontSize = 15.sp), color = Sun.OnGlass.copy(alpha = 0.75f))
-        Spacer(Modifier.height(20.dp))
-        // A scan-only alarm is one step, not "round 1 of 1".
-        val scanOnly = rounds == listOf(RoundType.QR_SCAN)
-        if (!scanOnly) {
-            Pips(done = index, total = rounds.size)
-            Spacer(Modifier.height(10.dp))
-        }
-        Text(
-            if (scanOnly) "SCAN YOUR CODE TO STOP IT" else "ROUND ${index + 1} OF ${rounds.size}",
-            style = AppText.label.copy(letterSpacing = 0.18.em),
-            color = Sun.OnGlass.copy(alpha = 0.7f),
-        )
-        // Without this, nobody finds out that tapping silences it: on the scan round there's
-        // nothing to tap.
-        Text(
-            if (quiet) "Quiet while you keep tapping" else "Tap the screen to quiet it",
-            style = AppText.caption,
-            color = Sun.OnGlass.copy(alpha = if (quiet) 0.55f else 0.85f),
-            modifier = Modifier.padding(top = 6.dp),
-        )
 
         Box(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(vertical = 14.dp)
+                .padding(vertical = if (compact) 8.dp else 14.dp)
                 // Watches touches on the way down without taking them: the puzzle still gets every tap.
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
@@ -232,32 +246,65 @@ private fun RingScreen(
                 },
             contentAlignment = Alignment.Center,
         ) {
-            AnimatedContent(
-                // Keyed on the round's type too, so the "Can't scan now?" swap slides in like a new round.
-                targetState = index to rounds[index],
-                transitionSpec = {
-                    (slideInHorizontally(Motion.settle()) { it / 6 } + fadeIn(tween(300)) + scaleIn(Motion.settle(), initialScale = 0.96f))
-                        .togetherWith(fadeOut(tween(150)))
-                },
-                label = "round",
-            ) { (i, type) ->
-                PuzzleCard {
-                    val level = levelAt(i)
-                    val onMiss: () -> Unit = { misses++ }
-                    when (type) {
-                        RoundType.STROOP -> StroopPuzzle(level, onMiss, ::roundSolved)
-                        RoundType.PATTERN_FLASH -> PatternPuzzle(level, onMiss, ::roundSolved)
-                        RoundType.ODD_ONE_OUT -> OddOneOutPuzzle(level, onMiss, ::roundSolved)
-                        RoundType.QR_SCAN -> QrPuzzle(session.qrCode.orEmpty(), onMiss, ::roundSolved, onCantScan = ::cantScan.takeIf { session.mix.isNotEmpty() })
-                        RoundType.PAIRS -> PairsPuzzle(level, ::roundSolved)
-                        RoundType.PATH -> PathPuzzle(level, ::roundSolved)
-                        RoundType.SLIDE -> SlidePuzzle(level, ::roundSolved)
+            FitToHeight(PUZZLE_DESIGN_HEIGHT) {
+                AnimatedContent(
+                    // Keyed on the round's type too, so the "Can't scan now?" swap slides in like a new round.
+                    targetState = index to rounds[index],
+                    transitionSpec = {
+                        (slideInHorizontally(Motion.settle()) { it / 6 } + fadeIn(tween(300)) + scaleIn(Motion.settle(), initialScale = 0.96f))
+                            .togetherWith(fadeOut(tween(150)))
+                    },
+                    label = "round",
+                ) { (i, type) ->
+                    PuzzleCard {
+                        val level = levelAt(i)
+                        val onMiss: () -> Unit = { misses++ }
+                        when (type) {
+                            RoundType.STROOP -> StroopPuzzle(level, onMiss, ::roundSolved)
+                            RoundType.PATTERN_FLASH -> PatternPuzzle(level, onMiss, ::roundSolved)
+                            RoundType.ODD_ONE_OUT -> OddOneOutPuzzle(level, onMiss, ::roundSolved)
+                            RoundType.QR_SCAN -> QrPuzzle(session.qrCode.orEmpty(), onMiss, ::roundSolved, onCantScan = ::cantScan.takeIf { session.mix.isNotEmpty() })
+                            RoundType.PAIRS -> PairsPuzzle(level, ::roundSolved)
+                            RoundType.PATH -> PathPuzzle(level, ::roundSolved)
+                            RoundType.SLIDE -> SlidePuzzle(level, ::roundSolved)
+                        }
                     }
                 }
             }
         }
 
-        HoldToGiveUp(GIVE_UP_HOLD_MS, onGiveUp = { onGiveUp(results.toList()) }, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp))
+        HoldToGiveUp(GIVE_UP_HOLD_MS, onGiveUp = { onGiveUp(results.toList()) }, modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp), compact = compact)
+    }
+    }
+}
+
+/** Below this height the ringing screen goes compact. A Flip's cover screen is about 400 dp. */
+private val COMPACT_HEIGHT = 600.dp
+
+/** The height every puzzle is laid out for. Less room than this and the puzzle is zoomed out to fit. */
+private val PUZZLE_DESIGN_HEIGHT = 400.dp
+
+/**
+ * Lays [content] out at [design] height and shrinks it to fit when there's less room, like zooming
+ * out, instead of squashing it. Taps still land: Compose maps touches through the scale.
+ */
+@Composable
+private fun FitToHeight(design: Dp, content: @Composable () -> Unit) {
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        if (maxHeight >= design) {
+            content()
+        } else {
+            val scale = maxHeight / design
+            Box(
+                Modifier
+                    .requiredSize(maxWidth / scale, design)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    },
+                contentAlignment = Alignment.Center,
+            ) { content() }
+        }
     }
 }
 

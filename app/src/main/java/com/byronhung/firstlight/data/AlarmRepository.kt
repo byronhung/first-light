@@ -112,6 +112,18 @@ class AlarmRepository(
         }
     }
 
+    suspend fun hasAlarms(): Boolean = alarmDao.getAll().isNotEmpty()
+
+    /** A backup from before a reinstall: settings and alarms back in place, alarms scheduled. Keeps Plus as it is. */
+    suspend fun restoreBackup(alarms: List<Alarm>, settings: AppSettings) = mutex.withLock {
+        val plus = wakeDao.settings()?.isPlus ?: false
+        wakeDao.saveSettings(settings.copy(isPlus = plus))
+        alarms.forEach {
+            alarmDao.insert(it)
+            applySchedule(it)
+        }
+    }
+
     /** After a reboot, a clock change, a force-stop, or any app start: make Android match the table. */
     suspend fun rescheduleAll() = mutex.withLock {
         alarmDao.getAll().forEach { applySchedule(it) }

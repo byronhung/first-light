@@ -4,6 +4,7 @@ import android.app.Application
 import com.byronhung.firstlight.alarm.AlarmScheduler
 import com.byronhung.firstlight.alarm.PendingCheckStore
 import com.byronhung.firstlight.data.AlarmRepository
+import com.byronhung.firstlight.data.Backup
 import com.byronhung.firstlight.data.FirstLightDatabase
 import com.byronhung.firstlight.ring.Notifications
 import com.byronhung.firstlight.ring.RingController
@@ -55,5 +56,6 @@ class FirstLightApp : Application() {
         appearance.value
         // Covers the cases no broadcast announces, like a force-stop wiping every scheduled alarm.
         appScope.launch { repository.rescheduleAll() }
+        Backup(this, repository, appScope).start()
     }
 }
