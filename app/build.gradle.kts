@@ -15,7 +15,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.byronhung.firstlight"
+        // The Play Store ID, under the studio name. The code's own package (namespace) stays as it is.
+        applicationId = "com.plainworks.firstlight"
         // 29 (Android 10): every lock-screen and full-screen-alarm API we need exists without fallbacks.
         minSdk = 29
         targetSdk = 36
