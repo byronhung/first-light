@@ -6,6 +6,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,8 +46,11 @@ import kotlin.random.Random
 
 private val BlockShape = RoundedCornerShape(14.dp)
 
+/** How far a finger moves along a block's track before it counts as a swipe. */
+private val SWIPE_THRESHOLD = 14.dp
+
 /**
- * Slide out, the simple wiSlide: tap a block on the end you want it to go, and it slides that way
+ * Slide out: swipe a block the way you want it to go (or tap its end), and it slides that way
  * as far as it can. Get the amber block out through the gap on the right. Boards come from
  * [slideFor], which only returns boards it has solved, so there are no dead ends.
  */
@@ -80,7 +84,7 @@ fun SlidePuzzle(level: Int, onSolved: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        PuzzlePrompt("Tap a block toward where it should go. Get the amber block out.")
+        PuzzlePrompt("Swipe a block to slide it. Get the amber block out.")
         BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             val boardSide = minOf(maxWidth - 24.dp, 300.dp)
             val n = board?.size ?: 4
@@ -126,8 +130,9 @@ fun SlidePuzzle(level: Int, onSolved: () -> Unit) {
 }
 
 /**
- * One block. [onSlide] gets whether the tap was on its far end (right or bottom) and returns
- * whether it moved; a block that can't move gives a small nudge instead.
+ * One block. A swipe along its track, or a tap on one end, calls [onSlide] with the direction
+ * (true = right or down) and gets back whether it moved; a block that can't move gives a small
+ * nudge instead. Swiping was added after testers tried to drag blocks and nothing happened.
  */
 @Composable
 private fun BlockView(b: Block, cell: Dp, out: Boolean, onSlide: (towardEnd: Boolean) -> Boolean) {
@@ -157,6 +162,23 @@ private fun BlockView(b: Block, cell: Dp, out: Boolean, onSlide: (towardEnd: Boo
                 detectTapGestures { pos ->
                     val towardEnd = if (b.horizontal) pos.x > size.width / 2 else pos.y > size.height / 2
                     if (!onSlide(towardEnd)) nudges++
+                }
+            }
+            .pointerInput(b.id, b.x, b.y) {
+                // One slide per swipe: fires once the finger has gone far enough along the track.
+                val threshold = SWIPE_THRESHOLD.toPx()
+                var travel = 0f
+                var fired = false
+                detectDragGestures(
+                    onDragStart = { travel = 0f; fired = false },
+                ) { change, drag ->
+                    change.consume()
+                    if (fired) return@detectDragGestures
+                    travel += if (b.horizontal) drag.x else drag.y
+                    if (kotlin.math.abs(travel) >= threshold) {
+                        fired = true
+                        if (!onSlide(travel > 0)) nudges++
+                    }
                 }
             }
             .semantics {
