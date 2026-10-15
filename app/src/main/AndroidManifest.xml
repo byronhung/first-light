@@ -17,9 +17,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- Rescheduling after a reboot, and asking to be left alone by battery optimisation. -->
+    <!-- Rescheduling after a reboot. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- Scan round: read the wake-up code (any barcode) away from the bed. -->
     <uses-permission android:name="android.permission.CAMERA" />

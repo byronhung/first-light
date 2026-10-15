@@ -107,9 +107,10 @@ fun rememberSetupItems(): List<SetupItem> {
             )
         }
         add(
-            SetupItem("Remove battery limits", "Stops the phone putting First Light to sleep overnight.", checks.battery) {
-                @Suppress("BatteryLife")
-                context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, pkg))
+            // Opens App info rather than asking directly: Play restricts the direct-ask permission to a
+            // short list of app types, and alarm clocks aren't clearly on it.
+            SetupItem("Remove battery limits", "Tap Battery, then Unrestricted. Stops the phone putting First Light to sleep overnight.", checks.battery) {
+                context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg))
             },
         )
     }
