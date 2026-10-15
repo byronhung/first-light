@@ -113,11 +113,13 @@ private fun dayAndCountdown(next: LocalDateTime, now: LocalDateTime): Pair<Strin
     // Round up, so the count never reads 0 before it rings.
     val seconds = ((Duration.between(now, next).toMillis() + 999) / 1000).coerceAtLeast(1)
     val minutes = (seconds + 59) / 60
+    // Hours and days count whole minutes left, so 23 h 59 m 30 s reads "23 h 59 m", not "1 d 0 h".
+    val whole = seconds / 60
     val until = when {
         // The last minute counts down in seconds; any earlier, seconds are just noise.
         seconds < 60 -> "$seconds s"
-        minutes >= 24 * 60 -> "${minutes / (24 * 60)} d ${(minutes % (24 * 60)) / 60} h"
-        minutes >= 60 -> "${minutes / 60} h ${minutes % 60} m"
+        whole >= 24 * 60 -> "${whole / (24 * 60)} d ${(whole % (24 * 60)) / 60} h"
+        whole >= 60 -> "${whole / 60} h ${whole % 60} m"
         else -> "$minutes m"
     }
     return day to until

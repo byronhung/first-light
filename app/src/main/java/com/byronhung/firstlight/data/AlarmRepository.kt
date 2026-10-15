@@ -20,6 +20,7 @@ import com.byronhung.firstlight.puzzle.planMorning
 import com.byronhung.firstlight.ring.RingSession
 import com.byronhung.firstlight.ring.RoundResultDraft
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDateTime
@@ -45,7 +46,7 @@ class AlarmRepository(
     val recentWakes: Flow<List<WakeLog>> = wakeDao.observeRecent(60)
 
     fun wakesBetween(range: LongRange): Flow<List<WakeLog>> = wakeDao.observeBetween(range.first, range.last + 1)
-    val settings: Flow<AppSettings?> = wakeDao.observeSettings()
+    val settings: Flow<AppSettings?> = wakeDao.observeSettings().map { it?.withTestPlus() }
 
     suspend fun setWakeCode(code: String?) = editSettings { it.copy(wakeCode = code?.trim()?.ifEmpty { null }) }
 
@@ -69,7 +70,7 @@ class AlarmRepository(
     suspend fun plusNudgeDismissed() = editSettings { it.copy(plusNudgeDismissals = it.plusNudgeDismissals + 1) }
 
     /** The settings as they are now, read once. */
-    suspend fun currentSettings(): AppSettings = wakeDao.settings() ?: AppSettings()
+    suspend fun currentSettings(): AppSettings = (wakeDao.settings() ?: AppSettings()).withTestPlus()
 
     private suspend fun editSettings(change: (AppSettings) -> AppSettings) = mutex.withLock {
         wakeDao.saveSettings(change(wakeDao.settings() ?: AppSettings()))
@@ -172,7 +173,7 @@ class AlarmRepository(
 
     /** Plans a morning for [alarm]: puzzles, levels, the scan. No side effects; wakeId is unset. */
     private suspend fun plan(alarm: Alarm): RingSession {
-        val settings = wakeDao.settings() ?: AppSettings()
+        val settings = (wakeDao.settings() ?: AppSettings()).withTestPlus()
         val wakeCode = settings.wakeCode
         // The mix is app-wide now (Settings); the alarm's own roundTypes column is no longer read.
         val puzzles = effectiveMix(parseMix(settings.puzzleMix), settings.isPlus)
@@ -282,3 +283,7 @@ class AlarmRepository(
         return Difficulty.nextLevel(type, current, atLevel)
     }
 }
+
+/** Closed-test builds unlock Plus for everyone ([BuildConfig.TEST_PLUS]). Applied on read, never saved. */
+private fun AppSettings.withTestPlus(): AppSettings =
+    if (com.byronhung.firstlight.BuildConfig.TEST_PLUS && !isPlus) copy(isPlus = true) else this

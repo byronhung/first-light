@@ -112,6 +112,11 @@ class NextTriggerTest {
         assertEquals("Next: today at 06:30 · in 2 m", describeNext(at, at.minusSeconds(61)))
     }
 
+    @Test fun `an alarm a day away minus seconds reads 23 h 59 m`() {
+        val at = LocalDateTime.of(2026, 10, 3, 6, 30)
+        assertEquals("Next: tomorrow at 06:30 · in 23 h 59 m", describeNext(at, at.minusDays(1).plusSeconds(20)))
+    }
+
     @Test fun `the hero has no period on a 24-hour phone, and nothing when all are off`() {
         assertNull(nextAlarm(listOf(Alarm(hour = 6, minute = 30)), friday2241, is24Hour = true)!!.period)
         assertNull(nextAlarm(listOf(Alarm(hour = 6, minute = 30, enabled = false)), friday2241, is24Hour = false))
