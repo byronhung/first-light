@@ -20,8 +20,8 @@ android {
         // 29 (Android 10): every lock-screen and full-screen-alarm API we need exists without fallbacks.
         minSdk = 29
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.8"
+        versionCode = 9
+        versionName = "0.9"
     }
 
     // Release key lives outside the repo; keystore.properties (git-ignored) says where.
