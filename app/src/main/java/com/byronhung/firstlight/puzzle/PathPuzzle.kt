@@ -71,10 +71,11 @@ fun PathPuzzle(level: Int, onSolved: () -> Unit) {
     ) {
         PuzzlePrompt("Tap tiles to turn them. Join the two lights.")
         // Tiles and the side lights share one measured size, so each light sits exactly on its row.
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
+        BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             val gap = 8.dp
             val light = 12.dp
-            val tile = (maxWidth - light * 2 - 12.dp - gap * (n - 1)) / n
+            // Capped so a 5×5 board still leaves room for the caption below it on a normal phone.
+            val tile = minOf((maxWidth - light * 2 - 12.dp - gap * (n - 1)) / n, MAX_TILE)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Lights(n, board.startRow, tile, gap, light)
                 Column(verticalArrangement = Arrangement.spacedBy(gap)) {
@@ -97,6 +98,8 @@ fun PathPuzzle(level: Int, onSolved: () -> Unit) {
         )
     }
 }
+
+private val MAX_TILE = 50.dp
 
 /** The glowing marker on the row where the path enters or leaves. */
 @Composable

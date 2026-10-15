@@ -84,9 +84,10 @@ fun SlidePuzzle(level: Int, onSolved: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        PuzzlePrompt("Swipe a block to slide it. Get the amber block out.")
+        PuzzlePrompt("Swipe blocks. Slide the amber one out.")
         BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            val boardSide = minOf(maxWidth - 24.dp, 300.dp)
+            // 280 at most, so the move count still fits under the board in the ring screen's card.
+            val boardSide = minOf(maxWidth - 24.dp, 280.dp)
             val n = board?.size ?: 4
             val exitRow = board?.exitRow ?: 1
             val cell = boardSide / n
