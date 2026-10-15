@@ -9,15 +9,18 @@ plugins {
 
 android {
     namespace = "com.byronhung.firstlight"
-    compileSdk = 35
+    // Android 16.1: the platform installed here. Play needs new apps to target 36 or higher.
+    compileSdk {
+        version = release(36) { minorApiLevel = 1 }
+    }
 
     defaultConfig {
         applicationId = "com.byronhung.firstlight"
         // 29 (Android 10): every lock-screen and full-screen-alarm API we need exists without fallbacks.
         minSdk = 29
-        targetSdk = 35
-        versionCode = 6
-        versionName = "0.6"
+        targetSdk = 36
+        versionCode = 7
+        versionName = "0.7"
     }
 
     // Release key lives outside the repo; keystore.properties (git-ignored) says where.
