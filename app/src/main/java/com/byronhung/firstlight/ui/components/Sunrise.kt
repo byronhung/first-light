@@ -82,6 +82,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -89,6 +90,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.byronhung.firstlight.ui.theme.AppShapes
@@ -115,7 +117,18 @@ import kotlin.math.ceil
  * The scene follows the content: scrolling anything inside moves its layers (read through nested
  * scroll, so no screen has to report it), and touches on open sky reach it. A touch that a card,
  * toggle or button has already taken is left alone.
+ *
+ * Sunrise has no scene layer, but its sun still answers a finger: while you press and drag, the glow
+ * leans toward it, and eases back when you let go. Quieter than the Plus skies on purpose.
  */
+/** Sunrise's glow: a 580 dp circle hung 270 dp below the bottom edge, so only its top shows. */
+private val SUN_GLOW_SIZE = 580.dp
+private val SUN_GLOW_OFFSET = 270.dp
+/** How far the glow leans toward a held finger (a share of the distance), and how fast it follows. */
+private const val SUN_LEAN_X = 0.75f
+private const val SUN_LEAN_Y = 0.22f
+private const val SUN_LEAN_EASE = 0.08f
+
 /** The widest the content gets: about a large phone. Beyond this, it centres and the sky shows around it. */
 val CONTENT_MAX_WIDTH = 560.dp
 
@@ -138,6 +151,23 @@ fun SkyBackground(
         }
     }
     val sceneOn = scene && sky.scene != Scene.SUN
+    val sunLeans = scene && sky.scene == Scene.SUN
+    var boxSize by remember { mutableStateOf(IntSize.Zero) }
+    // The glow's lean toward the finger, in px. Eased every frame; written only when it changes.
+    var lean by remember { mutableStateOf(Offset.Zero) }
+    // The glow's centre sits this far below the bottom edge (negative: above it).
+    val glowCentrePx = with(LocalDensity.current) { (SUN_GLOW_OFFSET - SUN_GLOW_SIZE / 2).toPx() }
+    if (sunLeans) LaunchedEffect(Unit) {
+        var cur = Offset.Zero
+        while (true) {
+            withFrameMillis { }
+            val centreY = boxSize.height + glowCentrePx
+            val target = if (input.down) Offset((input.x - boxSize.width / 2f) * SUN_LEAN_X, (input.y - centreY) * SUN_LEAN_Y) else Offset.Zero
+            cur += (target - cur) * SUN_LEAN_EASE
+            if (!input.down && cur.getDistance() < 0.5f) cur = Offset.Zero
+            if (cur != lean) lean = cur
+        }
+    }
     CompositionLocalProvider(LocalSky provides sky) {
         val t = rememberInfiniteTransition(label = "sky")
         val breathe by t.animateFloat(1f, 1.08f, infiniteRepeatable(tween(4_500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "sun")
@@ -145,15 +175,16 @@ fun SkyBackground(
         Box(
             modifier
                 .fillMaxSize()
+                .onSizeChanged { boxSize = it }
                 .drawBehind {
                     val h = size.height * if (drift) 1.4f else 1f
                     val y0 = -(h - size.height) * shift
                     drawRect(Brush.verticalGradient(0f to sky.top, 0.58f to sky.mid, 1f to sky.bottom, startY = y0, endY = y0 + h))
                 }
+                .then(if (sceneOn) Modifier.nestedScroll(scrolls) else Modifier)
                 .then(
-                    if (!sceneOn) Modifier
+                    if (!sceneOn && !sunLeans) Modifier
                     else Modifier
-                        .nestedScroll(scrolls)
                         .pointerInput(Unit) {
                             // Final pass: children have had their go, so a consumed press was a card's.
                             // Those never tap the sky, but they still drag once they move.
@@ -174,12 +205,14 @@ fun SkyBackground(
             if (sky.scene == Scene.SUN) Box(
                 Modifier
                     .align(Alignment.BottomCenter)
-                    .offset(y = 270.dp)
-                    .requiredSize(580.dp)
+                    .offset(y = SUN_GLOW_OFFSET)
+                    .requiredSize(SUN_GLOW_SIZE)
                     .graphicsLayer {
                         scaleX = breathe
                         scaleY = breathe
                         alpha = sky.sunAlpha
+                        translationX = lean.x
+                        translationY = lean.y
                     }
                     .background(
                         Brush.radialGradient(0f to Color(0x8CFFC480), 0.45f to Color(0x2EFF8C6E), 0.68f to Color.Transparent),
