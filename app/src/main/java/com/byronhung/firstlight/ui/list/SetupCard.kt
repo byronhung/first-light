@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -34,6 +35,12 @@ import com.byronhung.firstlight.ui.components.SectionLabel
 import com.byronhung.firstlight.ui.theme.LocalSky
 import com.byronhung.firstlight.ui.theme.AppText
 import com.byronhung.firstlight.ui.theme.Space
+
+/** Settings' "scroll to and highlight this row" extras. Not public API, but long-standing. */
+private const val EXTRA_FRAGMENT_ARG_KEY = ":settings:fragment_args_key"
+private const val EXTRA_SHOW_FRAGMENT_ARGS = ":settings:show_fragment_args"
+/** The Battery row's key on an app's App info page. */
+private const val BATTERY_ROW = "battery"
 
 /** What the phone must allow before an alarm can reliably ring. Re-read every time the app resumes. */
 data class SetupChecks(
@@ -79,14 +86,6 @@ fun rememberSetupItems(): List<SetupItem> {
         checks = SetupChecks.read(context)
     }
     val pkg = Uri.parse("package:${context.packageName}")
-    var batteryGuide by remember { mutableStateOf(false) }
-    if (batteryGuide) BatteryGuide(
-        onOpenSettings = {
-            batteryGuide = false
-            context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg))
-        },
-        onDismiss = { batteryGuide = false },
-    )
     return buildList {
         add(
             SetupItem("Allow notifications", "The ringing screen opens through one.", checks.notifications) {
@@ -116,10 +115,15 @@ fun rememberSetupItems(): List<SetupItem> {
         }
         add(
             // Opens App info rather than asking directly: Play restricts the direct-ask permission to a
-            // short list of app types, and alarm clocks aren't clearly on it. [BatteryGuide] shows the
-            // two taps first.
-            SetupItem("Remove battery limits", "Stops the phone putting First Light to sleep overnight.", checks.battery) {
-                batteryGuide = true
+            // short list of app types, and alarm clocks aren't clearly on it. The extras ask Settings to
+            // scroll to the Battery row and flash it: Samsung does (checked on One UI), stock Android
+            // ignores them, and either way the page opens.
+            SetupItem("Remove battery limits", "Tap Battery, then Unrestricted. Stops the phone putting First Light to sleep overnight.", checks.battery) {
+                context.startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
+                        .putExtra(EXTRA_FRAGMENT_ARG_KEY, BATTERY_ROW)
+                        .putExtra(EXTRA_SHOW_FRAGMENT_ARGS, Bundle().apply { putString(EXTRA_FRAGMENT_ARG_KEY, BATTERY_ROW) }),
+                )
             },
         )
     }
