@@ -91,7 +91,7 @@ fun describeNext(next: LocalDateTime, now: LocalDateTime, is24Hour: Boolean = tr
     return "Next: $day at ${formatTime(next.hour, next.minute, is24Hour)} · in $until"
 }
 
-/** The list's hero: the next alarm as big digits, AM/PM, and "tomorrow · in 8 h 30 m". */
+/** The list's hero: the next alarm as big digits, AM/PM, and "tomorrow · in 8 h 30 m" ("in 42 s" in the last minute). */
 data class NextAlarm(val digits: String, val period: String?, val line: String)
 
 fun nextAlarm(alarms: List<Alarm>, now: LocalDateTime, is24Hour: Boolean): NextAlarm? {
@@ -110,9 +110,12 @@ private fun dayAndCountdown(next: LocalDateTime, now: LocalDateTime): Pair<Strin
         1L -> "tomorrow"
         else -> next.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
     }
-    // Round up: an alarm 30 seconds away is "in 1 m", never "in 0 m".
-    val minutes = (Duration.between(now, next).seconds + 59) / 60
+    // Round up, so the count never reads 0 before it rings.
+    val seconds = ((Duration.between(now, next).toMillis() + 999) / 1000).coerceAtLeast(1)
+    val minutes = (seconds + 59) / 60
     val until = when {
+        // The last minute counts down in seconds; any earlier, seconds are just noise.
+        seconds < 60 -> "$seconds s"
         minutes >= 24 * 60 -> "${minutes / (24 * 60)} d ${(minutes % (24 * 60)) / 60} h"
         minutes >= 60 -> "${minutes / 60} h ${minutes % 60} m"
         else -> "$minutes m"

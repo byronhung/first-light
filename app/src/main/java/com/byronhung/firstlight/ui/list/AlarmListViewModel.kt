@@ -47,7 +47,7 @@ data class AlarmListUi(
     val rows: List<AlarmRowUi>,
     /** The hero: next alarm, or null when nothing is on. */
     val next: NextAlarm?,
-    /** Picks the sky. Updated every minute along with the countdown. */
+    /** Picks the sky. Updated along with the countdown. */
     val hour: Int,
 )
 
@@ -57,16 +57,19 @@ class AlarmListViewModel(
     private val is24Hour: Boolean,
 ) : ViewModel() {
 
-    /** Fires once now, then on every minute boundary, so "in 7 h 49 m" keeps counting down. */
-    private val minuteTicks = flow {
+    /**
+     * Fires once now, then on every second boundary, so "in 7 h 49 m" keeps counting down and the
+     * last minute can count seconds. The screen only redraws when the text actually changes.
+     */
+    private val ticks = flow {
         while (true) {
             emit(Unit)
-            delay(60_000 - System.currentTimeMillis() % 60_000)
+            delay(1_000 - System.currentTimeMillis() % 1_000)
         }
     }
 
     /** Null until the database has answered, so the screen doesn't flash "all quiet". */
-    val ui: StateFlow<AlarmListUi?> = combine(repository.alarms, minuteTicks) { alarms, _ ->
+    val ui: StateFlow<AlarmListUi?> = combine(repository.alarms, ticks) { alarms, _ ->
         val now = LocalDateTime.now()
         AlarmListUi(
             rows = alarms.map {

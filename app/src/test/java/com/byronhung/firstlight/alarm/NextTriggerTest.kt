@@ -104,6 +104,14 @@ class NextTriggerTest {
         assertEquals("tomorrow · in 7 h 49 m", next.line)
     }
 
+    @Test fun `the last minute counts down in seconds, never reaching 0`() {
+        val at = LocalDateTime.of(2026, 10, 2, 6, 30)
+        assertEquals("Next: today at 06:30 · in 42 s", describeNext(at, at.minusSeconds(42)))
+        assertEquals("Next: today at 06:30 · in 1 s", describeNext(at, at.minusNanos(300_000_000)))
+        assertEquals("Next: today at 06:30 · in 1 m", describeNext(at, at.minusSeconds(60)))
+        assertEquals("Next: today at 06:30 · in 2 m", describeNext(at, at.minusSeconds(61)))
+    }
+
     @Test fun `the hero has no period on a 24-hour phone, and nothing when all are off`() {
         assertNull(nextAlarm(listOf(Alarm(hour = 6, minute = 30)), friday2241, is24Hour = true)!!.period)
         assertNull(nextAlarm(listOf(Alarm(hour = 6, minute = 30, enabled = false)), friday2241, is24Hour = false))
