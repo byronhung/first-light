@@ -14,6 +14,8 @@ import com.byronhung.firstlight.alarm.formatTime
 
 object Notifications {
     private const val CHANNEL_RINGING = "ringing"
+    /** The same ring once its screen is showing: no banner over the screen it opens. */
+    private const val CHANNEL_RINGING_ON_SCREEN = "ringing_on_screen"
     private const val CHANNEL_CHECK = "wake_check"
     const val ID_RINGING = 1
     const val ID_CHECK = 2
@@ -32,8 +34,14 @@ object Notifications {
             enableVibration(true)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
+        val onScreen = NotificationChannel(CHANNEL_RINGING_ON_SCREEN, "Ringing alarm, screen open", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "Shown while the ringing screen is already open, so no banner covers it."
+            setSound(null, null)
+            enableVibration(false)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        }
         context.getSystemService(NotificationManager::class.java)
-            .createNotificationChannels(listOf(channel, check))
+            .createNotificationChannels(listOf(channel, onScreen, check))
     }
 
     fun wakeCheck(context: Context, check: WakeCheck, deadline: Long): Notification {
@@ -65,8 +73,10 @@ object Notifications {
     /**
      * The full-screen intent is what puts the ringing screen over the lock screen. If the phone is
      * unlocked and in use, Android shows it as a banner instead; tapping it opens the same screen.
+     * Once that screen is showing ([onScreen]), the banner would only cover its clock, so the same
+     * notification moves to a quiet channel with no full-screen intent.
      */
-    fun ringing(context: Context, session: RingSession?): Notification {
+    fun ringing(context: Context, session: RingSession?, onScreen: Boolean = false): Notification {
         val open = PendingIntent.getActivity(
             context,
             0,
@@ -78,7 +88,7 @@ object Notifications {
             val time = formatTime(it.hour, it.minute, DateFormat.is24HourFormat(context))
             if (it.label.isBlank()) time else "$time · ${it.label}"
         } ?: "Alarm"
-        return NotificationCompat.Builder(context, CHANNEL_RINGING)
+        return NotificationCompat.Builder(context, if (onScreen) CHANNEL_RINGING_ON_SCREEN else CHANNEL_RINGING)
             .setSmallIcon(R.drawable.ic_alarm)
             .setContentTitle(title)
             .setContentText("Solve the puzzles to stop it")
@@ -86,11 +96,12 @@ object Notifications {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
-            .setOnlyAlertOnce(true)
+            // Off screen it may alert again, so leaving the ring screen brings the banner back.
+            .setOnlyAlertOnce(onScreen)
             // Android 12+ holds back a foreground service's notification for up to 10 s unless
             // asked not to. For an alarm that delay is the bug: show it now.
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setFullScreenIntent(open, true)
+            .apply { if (!onScreen) setFullScreenIntent(open, true) }
             .setContentIntent(open)
             .build()
     }

@@ -40,6 +40,16 @@ class RingActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        (application as FirstLightApp).ringController.screenVisible.value = true
+    }
+
+    override fun onPause() {
+        (application as FirstLightApp).ringController.screenVisible.value = false
+        super.onPause()
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean =
         if (keyCode in SWALLOWED_KEYS) true else super.onKeyDown(keyCode, event)
 

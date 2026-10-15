@@ -62,6 +62,9 @@ class RingController(
 
     val isActive: Boolean get() = _state.value != RingState.Idle
 
+    /** The ringing screen is open and in front. The ring service uses it to drop the banner. */
+    val screenVisible = MutableStateFlow(false)
+
     /** A test ring handed over by the editor, picked up by [RingService] when it starts. */
     @Volatile var pendingTest: RingSession? = null
 

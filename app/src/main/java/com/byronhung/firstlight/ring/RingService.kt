@@ -1,6 +1,7 @@
 package com.byronhung.firstlight.ring
 
 import android.app.Notification
+import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -65,7 +67,15 @@ class RingService : Service() {
                 return@launch
             }
             controller.begin(session)
-            goForeground(Notifications.ringing(this@RingService, session))
+            goForeground(Notifications.ringing(this@RingService, session, onScreen = controller.screenVisible.value))
+            // Banner while the ring screen is closed, quiet while it's open. Only this service posts
+            // the ringing notification, so it ends with the service and can't be left behind.
+            launch {
+                controller.screenVisible.drop(1).collect { visible ->
+                    getSystemService(NotificationManager::class.java)
+                        .notify(Notifications.ID_RINGING, Notifications.ringing(this@RingService, session, onScreen = visible))
+                }
+            }
             ringer = Ringer(this@RingService).also { it.start(scope, session.soundUri, gentle = session.gentleStart) }
             // Quiet while you solve: checked often enough that a tap silences it within a blink.
             launch {
