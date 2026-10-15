@@ -25,6 +25,11 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
+/** Debug builds can pause reading (the preview stays live), for real store screenshots of a scan. */
+object ScanPause {
+    @Volatile var paused = false
+}
+
 /**
  * Live camera preview that reports every barcode or QR code it reads. Reading happens on the
  * phone (ML Kit's bundled model), no network. Caller must already hold the camera permission.
@@ -59,7 +64,7 @@ fun BarcodeScanner(
                 .build()
             analysis.setAnalyzer(executor) { proxy ->
                 val media = proxy.image
-                if (media == null) {
+                if (media == null || ScanPause.paused) {
                     proxy.close()
                     return@setAnalyzer
                 }

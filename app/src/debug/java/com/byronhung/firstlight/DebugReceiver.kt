@@ -31,6 +31,7 @@ import java.time.ZoneId
  *   ... -a com.byronhung.firstlight.debug.DEMO                          (store screenshots: 3 alarms + 4 weeks of mornings;
  *                                                                        force-stop and reopen the app afterwards)
  *   ... -a com.byronhung.firstlight.debug.CODE --es code "First Light"   (register a wake-up code without the camera)
+ *   ... -a com.byronhung.firstlight.debug.SCAN_PAUSE --ez on true       (camera stays live but reads nothing; until restart)
  *
  * ADD also takes --es label L, --ei checks N (wake checks, default 0), --ei checkDelaySec S (seconds between
  * checks, instead of 5 minutes; lasts until the app process dies) and --ei wakeMethod M (0 puzzles, 1 scan, 2 both).
@@ -76,6 +77,10 @@ class DebugReceiver : BroadcastReceiver() {
                     ACTION_THEME -> {
                         app.repository.setTheme(SkyTheme.of(intent.getIntExtra("code", 0)))
                         Log.i(TAG, "Theme set")
+                    }
+                    ACTION_SCAN_PAUSE -> {
+                        com.byronhung.firstlight.puzzle.ScanPause.paused = intent.getBooleanExtra("on", true)
+                        Log.i(TAG, "Scan pause set")
                     }
                     ACTION_CODE -> {
                         app.repository.setWakeCode(intent.getStringExtra("code") ?: "First Light")
@@ -135,5 +140,6 @@ class DebugReceiver : BroadcastReceiver() {
         const val ACTION_MIX = "com.byronhung.firstlight.debug.MIX"
         const val ACTION_DEMO = "com.byronhung.firstlight.debug.DEMO"
         const val ACTION_CODE = "com.byronhung.firstlight.debug.CODE"
+        const val ACTION_SCAN_PAUSE = "com.byronhung.firstlight.debug.SCAN_PAUSE"
     }
 }
