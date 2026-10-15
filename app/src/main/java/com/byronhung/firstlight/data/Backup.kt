@@ -112,7 +112,7 @@ class Backup(private val context: Context, private val repository: AlarmReposito
                     label = o.optString("label", ""),
                     enabled = o.optBoolean("enabled", true),
                     roundTypes = types.ifEmpty { RoundType.MORNING_DEFAULT },
-                    wakeChecks = o.optInt("wakeChecks", 1),
+                    wakeChecks = o.optInt("wakeChecks", 0),
                     difficulty = o.optInt("difficulty", FOLLOW_DEFAULT),
                     wakeMethod = o.optInt("wakeMethod", 0),
                     soundUri = if (o.isNull("soundUri")) null else o.optString("soundUri"),

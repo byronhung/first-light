@@ -83,7 +83,7 @@ class AlarmEditViewModel(
     /** A new alarm opens on the time it is now, so the wheels start close to wherever you're setting it. */
     private fun newDraft() = EditDraft(
         hour = LocalTime.now().hour, minute = LocalTime.now().minute, repeatDays = Weekdays.WEEKDAYS, label = "",
-        wakeChecks = 1, wakeMethod = WakeMethod.PUZZLES.code, difficulty = FOLLOW_DEFAULT, soundUri = null, isNew = true,
+        wakeChecks = 0, wakeMethod = WakeMethod.PUZZLES.code, difficulty = FOLLOW_DEFAULT, soundUri = null, isNew = true,
     )
 
     fun setTime(hour: Int, minute: Int) {

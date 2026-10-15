@@ -23,10 +23,10 @@ data class Alarm(
     /** Unused since v0.2: the code is shared now, see [AppSettings.wakeCode]. Kept to avoid a migration. */
     val qrCode: String? = null,
     /**
-     * "Still awake?" checks after solving, 0–3. Like snooze, but the other way round. New alarms
-     * get 1; alarms from before v0.2 get 0 (the column default) so nothing changes under them.
+     * "Still awake?" checks after solving, 0–3. Like snooze, but the other way round. Off by
+     * default since v0.7: something you opt into, not a surprise ring after you've solved it.
      */
-    @ColumnInfo(defaultValue = "0") val wakeChecks: Int = 1,
+    @ColumnInfo(defaultValue = "0") val wakeChecks: Int = 0,
     /** Unused since v5: replaced by [wakeMethod] (the migration carried its value over). */
     @ColumnInfo(defaultValue = "0") val finishWithScan: Boolean = false,
     /**

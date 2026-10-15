@@ -325,8 +325,8 @@ private fun ColumnScope.WakeCheckDemo(next: () -> Unit) {
     Step(
         label = "Wake checks",
         title = "Five minutes later: still awake?",
-        body = "After you solve an alarm, it checks in. Tap I'm up within a minute, or it rings again " +
-            "from round 1. If you're already using your phone, it passes on its own. Set 0 to 3 per alarm.",
+        body = "Turn them on for an alarm and, after you solve it, it checks in. Tap I'm up within a minute, " +
+            "or it rings again from round 1. If you're already using your phone, it passes on its own. Off by default, up to 3 per alarm.",
         buttons = { AmberButton("Next", next, Modifier.fillMaxWidth(), height = 56.dp) },
     ) {
         PuzzleGlass {
