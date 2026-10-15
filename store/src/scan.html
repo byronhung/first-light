@@ -1,0 +1,45 @@
+<html><head><style>
+body{margin:0;width:1080px;height:2160px;overflow:hidden;position:relative;background:url(scanring.png)}
+.cam{position:absolute;left:110px;top:869px;width:860px;height:859px;border-radius:46px;overflow:hidden;
+ background:radial-gradient(120% 90% at 30% 20%,#f4efe8 0%,#ddd5ca 55%,#b9ae9f 100%)}
+.tiles{position:absolute;inset:0 0 38% 0;background:
+ linear-gradient(90deg,rgba(255,255,255,.0) 0 214px,rgba(160,150,140,.35) 214px 217px,transparent 217px) 0 0/217px 100%,
+ linear-gradient(0deg,rgba(160,150,140,.35) 0 3px,transparent 3px) 0 0/100% 160px, #ece6de}
+.counter{position:absolute;left:0;right:0;bottom:0;height:40%;background:linear-gradient(180deg,#d9d2c8,#c4baae)}
+.counter:before{content:"";position:absolute;left:0;right:0;top:0;height:10px;background:#efe9e1}
+svg{position:absolute;left:0;top:0}
+.vig{position:absolute;inset:0;box-shadow:inset 0 0 160px rgba(60,40,30,.35)}
+</style></head><body>
+<div class="cam"><div class="tiles"></div><div class="counter"></div>
+<svg width="860" height="859" viewBox="0 0 860 859" id="s"></svg><div class="vig"></div></div>
+<script>
+// EAN-13 for 5012345678900-ish demo number
+const L=["0001101","0011001","0010011","0111101","0100011","0110001","0101111","0111011","0110111","0001011"];
+const G=L.map(c=>c.split('').reverse().map(b=>b=='0'?'1':'0').join('').split('').map(b=>b=='0'?'1':'0').join(''));
+const R=L.map(c=>c.split('').map(b=>b=='0'?'1':'0').join(''));
+const Gc=R.map(c=>c.split('').reverse().join(''));
+const par=["LLLLLL","LLGLGG","LLGGLG","LLGGGL","LGLLGG","LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL"];
+function ean(d){let s=d.slice(0,12).split('').map(Number);let sum=s.reduce((a,v,i)=>a+v*(i%2?3:1),0);s.push((10-sum%10)%10);
+ let bits="101";const p=par[s[0]];for(let i=1;i<7;i++)bits+=(p[i-1]=='L'?L:Gc)[s[i]];bits+="01010";for(let i=7;i<13;i++)bits+=R[s[i]];bits+="101";return {bits,digits:s.join('')}}
+const {bits,digits}=ean("501234567890");
+const m=4.2, bw=bits.length*m, bh=170;
+let bars="";for(let i=0;i<bits.length;i++)if(bits[i]=='1'){const guard=(i<3||(i>=45&&i<50)||i>=92);bars+=`<rect x="${i*m}" y="0" width="${m}" height="${guard?bh+18:bh}" fill="#1d1d1f"/>`}
+document.getElementById('s').innerHTML=`
+<defs>
+ <linearGradient id="tube" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#f3f5f6"/><stop offset="1" stop-color="#cfd6da"/></linearGradient>
+ <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fb6c4"/><stop offset="1" stop-color="#23808f"/></linearGradient>
+ <filter id="sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="22" stdDeviation="20" flood-color="#3a2a20" flood-opacity=".35"/></filter>
+</defs>
+<g transform="translate(395 480) rotate(-14)" filter="url(#sh)">
+ <path d="M-380,-150 L-330,-160 L300,-128 Q330,-126 330,-96 L330,96 Q330,126 300,128 L-330,160 L-380,150 Z" fill="url(#tube)"/>
+ <g fill="#d6dde1">${Array.from({length:7},(_,i)=>`<rect x="-378" y="${-148+i*44}" width="44" height="6" rx="3"/>`).join('')}</g>
+ <path d="M-330,-160 L300,-128 L300,-96 L-330,-120 Z" fill="#3aa2b1" opacity=".9"/>
+ <path d="M-330,160 L300,128 L300,104 L-330,128 Z" fill="#3aa2b1" opacity=".9"/>
+ <rect x="330" y="-110" width="108" height="220" rx="22" fill="url(#cap)"/>
+ <g fill="#ffffff" opacity=".35">${Array.from({length:9},(_,i)=>`<rect x="${342+i*10}" y="-104" width="4" height="208" rx="2"/>`).join('')}</g>
+ <rect x="${-bw/2-26}" y="-112" width="${bw+52}" height="${bh+82}" rx="10" fill="#ffffff"/>
+ <g transform="translate(${-bw/2} -96)">${bars}
+  <text x="${bw/2}" y="${bh+44}" text-anchor="middle" font-family="Consolas, monospace" font-size="30" letter-spacing="9" fill="#1d1d1f">${digits}</text></g>
+ <text x="-300" y="-58" font-family="Segoe UI, sans-serif" font-weight="600" font-size="34" fill="#23808f" opacity=".85">mint</text>
+</g>`;
+</script></body></html>

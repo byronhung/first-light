@@ -1,0 +1,34 @@
+<title>First Light Store Assets</title>
+<style>
+:root{--bg:#F6F1EC;--fg:#2A1D3A;--muted:#7A6A78;--card:#FFFFFF;--line:#E8DED6;--accent:#E8875A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#17121F;--fg:#F3E9DF;--muted:#B3A3B2;--card:#221A2C;--line:#352A40;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17121F;--fg:#F3E9DF;--muted:#B3A3B2;--card:#221A2C;--line:#352A40;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+.w{max-width:1100px;margin:0 auto;padding-inline:20px;padding-block:36px 60px}
+h1{font-size:30px;margin:0 0 6px}h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:32px 0 12px}
+p{color:var(--muted);margin:0;max-width:65ch}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+figure{margin:0;display:grid;gap:8px;min-width:0}
+figcaption{font-size:13px;color:var(--muted)}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.shots img{width:100%;border-radius:14px;border:1px solid var(--line);display:block}
+.icon{width:160px;border-radius:22%}
+.feat{width:min(100%,640px);border-radius:10px;display:block}
+</style>
+<div class="w">
+<h1>First Light store assets</h1>
+<p>Everything the Play listing needs. Screenshots are 1080×2160 from the emulator with demo data. In the scan shot, the toothpaste tube is drawn into the camera window.</p>
+<h2>App icon · 512×512</h2>
+<img class="icon" src="icon-512.png" alt="First Light icon">
+<h2>Feature graphic · 1024×500</h2>
+<img class="feat" src="feature-1024x500.png" alt="Feature graphic">
+<h2>Phone screenshots · in upload order</h2>
+<div class="shots">
+<figure><img src="1-ring.png" alt=""><figcaption>1 · Ringing: odd one out</figcaption></figure>
+<figure><img src="2-scan.png" alt=""><figcaption>2 · Scan the toothpaste</figcaption></figure>
+<figure><img src="3-alarms.png" alt=""><figcaption>3 · Your alarms</figcaption></figure>
+<figure><img src="4-history.png" alt=""><figcaption>4 · History calendar</figcaption></figure>
+<figure><img src="5-edit.png" alt=""><figcaption>5 · Edit an alarm</figcaption></figure>
+<figure><img src="6-coast-sky.png" alt=""><figcaption>6 · Coast sky (Plus)</figcaption></figure>
+<figure><img src="7-settings.png" alt=""><figcaption>7 · Puzzles and skies</figcaption></figure>
+</div></div>
