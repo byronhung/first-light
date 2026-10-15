@@ -426,9 +426,11 @@ private fun Viewfinder() {
         val left = (size.width - bw) / 2
         val top = (size.height - bh) / 2
         drawRoundRect(Color(0xFFF3EFE6), Offset(left - 10.dp.toPx(), top - 8.dp.toPx()), Size(bw + 20.dp.toPx(), bh + 16.dp.toPx()), CornerRadius(6.dp.toPx()))
+        // Bar widths are in units scaled to fill the label exactly, edge to edge.
+        val unit = bw / BARS_UNITS
         var x = left
         for ((i, w) in BARS.withIndex()) {
-            val px = w * 1.6f.dp.toPx()
+            val px = w * unit
             if (i % 2 == 0) drawRect(Color(0xFF1B1820), Offset(x, top), Size(px, bh))
             x += px
         }
@@ -438,6 +440,7 @@ private fun Viewfinder() {
 }
 
 private val BARS = listOf(3, 1, 2, 1, 4, 1, 1, 3, 2, 1, 1, 2, 3, 1, 2, 1, 1, 4, 1, 2, 2, 1, 3, 1, 2, 2, 1, 3, 2, 1, 3)
+private val BARS_UNITS = BARS.sum().toFloat()
 
 /** History, shown with an example week: the calendar's dots and the time you were really up. */
 @Composable
