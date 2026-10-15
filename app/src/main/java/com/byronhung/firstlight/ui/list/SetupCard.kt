@@ -79,6 +79,14 @@ fun rememberSetupItems(): List<SetupItem> {
         checks = SetupChecks.read(context)
     }
     val pkg = Uri.parse("package:${context.packageName}")
+    var batteryGuide by remember { mutableStateOf(false) }
+    if (batteryGuide) BatteryGuide(
+        onOpenSettings = {
+            batteryGuide = false
+            context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg))
+        },
+        onDismiss = { batteryGuide = false },
+    )
     return buildList {
         add(
             SetupItem("Allow notifications", "The ringing screen opens through one.", checks.notifications) {
@@ -108,9 +116,10 @@ fun rememberSetupItems(): List<SetupItem> {
         }
         add(
             // Opens App info rather than asking directly: Play restricts the direct-ask permission to a
-            // short list of app types, and alarm clocks aren't clearly on it.
-            SetupItem("Remove battery limits", "Tap Battery, then Unrestricted. Stops the phone putting First Light to sleep overnight.", checks.battery) {
-                context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg))
+            // short list of app types, and alarm clocks aren't clearly on it. [BatteryGuide] shows the
+            // two taps first.
+            SetupItem("Remove battery limits", "Stops the phone putting First Light to sleep overnight.", checks.battery) {
+                batteryGuide = true
             },
         )
     }
