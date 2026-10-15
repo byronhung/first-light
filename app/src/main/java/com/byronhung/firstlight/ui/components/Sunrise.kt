@@ -38,7 +38,6 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -435,6 +434,9 @@ fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit, mod
 /**
  * The scroll-wheel time picker column: snaps row by row, the centre row is big and solid, the
  * rows above and below shrink and fade, and the ends fade out.
+ *
+ * With [wrap], the wheel loops: past 59 comes 00 again. It's the same list repeated many times,
+ * starting in the middle, so nobody scrolls far enough to reach an end.
  */
 @Composable
 fun WheelColumn(
@@ -443,18 +445,23 @@ fun WheelColumn(
     onSelected: (Int) -> Unit,
     label: String,
     modifier: Modifier = Modifier,
+    wrap: Boolean = false,
 ) {
     val sky = LocalSky.current
     val rowHeight = 44.dp
     val rowPx = with(LocalDensity.current) { rowHeight.toPx() }
-    val state = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex.coerceIn(items.indices))
+    val rows = if (wrap) items.size * WRAP_CYCLES else items.size
+    val start = initialIndex.coerceIn(items.indices) + if (wrap) items.size * (WRAP_CYCLES / 2) else 0
+    val state = rememberLazyListState(initialFirstVisibleItemIndex = start)
     val fling = rememberSnapFlingBehavior(lazyListState = state)
-    val selected by remember {
+    // The centre row, counted along the whole (repeated) wheel.
+    val centre by remember {
         derivedStateOf {
             val i = state.firstVisibleItemIndex + if (state.firstVisibleItemScrollOffset > rowPx / 2) 1 else 0
-            i.coerceIn(items.indices)
+            i.coerceIn(0, rows - 1)
         }
     }
+    val selected = centre % items.size
     val latest by rememberUpdatedState(onSelected)
     LaunchedEffect(selected) { latest(selected) }
 
@@ -474,8 +481,9 @@ fun WheelColumn(
             }
             .semantics { contentDescription = "$label: ${items.getOrNull(selected)}" },
     ) {
-        itemsIndexed(items) { i, value ->
-            val d = abs(i - selected)
+        items(rows) { i ->
+            val value = items[i % items.size]
+            val d = abs(i - centre)
             val alpha by animateFloatAsState(when (d) { 0 -> 1f; 1 -> 0.5f; else -> 0.22f }, tween(200), label = "wheelAlpha")
             val scale by animateFloatAsState(when (d) { 0 -> 1f; 1 -> 0.78f; else -> 0.66f }, tween(200), label = "wheelScale")
             Box(
@@ -499,6 +507,9 @@ fun WheelColumn(
         }
     }
 }
+
+/** How many times a wrapping wheel repeats its list: thousands of rows each way from the start. */
+private const val WRAP_CYCLES = 200
 
 /**
  * Hold to give up: a ring that fills over [holdMs] while pressed and springs back empty on release.

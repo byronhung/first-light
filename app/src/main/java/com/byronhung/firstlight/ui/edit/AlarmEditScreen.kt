@@ -297,8 +297,8 @@ private fun TimeWheels(hour: Int, minute: Int, is24Hour: Boolean, onTime: (Int, 
         )
         Row(Modifier.fillMaxWidth()) {
             val hours = if (is24Hour) (0..23).map { "%02d".format(it) } else (1..12).map { it.toString() }
-            WheelColumn(hours, h, { h = it; report() }, "Hour", Modifier.weight(1f))
-            WheelColumn((0..59).map { "%02d".format(it) }, m, { m = it; report() }, "Minute", Modifier.weight(1f))
+            WheelColumn(hours, h, { h = it; report() }, "Hour", Modifier.weight(1f), wrap = true)
+            WheelColumn((0..59).map { "%02d".format(it) }, m, { m = it; report() }, "Minute", Modifier.weight(1f), wrap = true)
             if (!is24Hour) WheelColumn(listOf("AM", "PM"), pm, { pm = it; report() }, "AM or PM", Modifier.weight(1f))
         }
     }
