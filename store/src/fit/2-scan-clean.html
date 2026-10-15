@@ -1,0 +1,31 @@
+<html><body style="margin:0;background:#000">
+<canvas id="c" width="1080" height="2340"></canvas>
+<script>
+const img = new Image();
+img.onload = () => {
+  const c = document.getElementById('c'), g = c.getContext('2d');
+  g.drawImage(img, 0, 0);
+  // Repaint the status bar strip from the sky just below it, column by column, so the
+  // background stays the app's own gradient. Only the bar changes; the app screen is untouched.
+  const bar = 110, src = g.getImageData(0, bar + 6, 1080, 1).data;
+  for (let x = 0; x < 1080; x++) {
+    g.fillStyle = `rgb(${src[x*4]},${src[x*4+1]},${src[x*4+2]})`;
+    g.fillRect(x, 0, 1, bar + 6);
+  }
+  g.fillStyle = '#fff';
+  g.font = '500 40px "Segoe UI", Roboto, sans-serif';
+  g.textBaseline = 'middle';
+  g.fillText('2:47', 55, 53);
+  // Wi-Fi: three arcs and a dot.
+  const wx = 912, wy = 72;
+  g.strokeStyle = '#fff'; g.lineCap = 'round'; g.lineWidth = 6;
+  for (const r of [14, 26, 38]) { g.beginPath(); g.arc(wx, wy, r, Math.PI*1.25, Math.PI*1.75); g.stroke(); }
+  g.beginPath(); g.arc(wx, wy - 1, 4, 0, 7); g.fill();
+  // Battery: full.
+  const bx = 960, by = 38, bw = 64, bh = 32;
+  g.beginPath(); g.roundRect(bx, by, bw, bh, 9); g.fill();
+  g.beginPath(); g.roundRect(bx + bw + 3, by + 10, 6, 12, 3); g.fill();
+  document.title = 'done';
+};
+img.src = '2-scan-real.jpg';
+</script></body></html>
