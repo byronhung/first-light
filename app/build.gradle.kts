@@ -20,8 +20,8 @@ android {
         // 29 (Android 10): every lock-screen and full-screen-alarm API we need exists without fallbacks.
         minSdk = 29
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.10"
+        versionCode = 11
+        versionName = "0.11"
         // Closed test: every tester gets Plus, so the Plus puzzles and skies get real mornings too.
         // Turn off (or delete) when Google Play Billing goes in (P11).
         buildConfigField("boolean", "TEST_PLUS", "true")
