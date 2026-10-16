@@ -317,6 +317,17 @@ fun SettingsScreen(
 
             QuietButton("How First Light works", onHelp, Modifier.fillMaxWidth())
 
+            // The credits: who made it, and whose idea it was.
+            Column(
+                Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text("First Light ${BuildConfig.VERSION_NAME}", style = AppText.caption.copy(fontSize = 13.sp), color = sky.mute)
+                Text("Made by Plainworks", style = AppText.caption.copy(fontSize = 13.sp), color = sky.mute)
+                Text("Idea by Laurence Sengia", style = AppText.caption.copy(fontSize = 13.sp), color = sky.mute)
+            }
+
             // Debug builds only: flip Plus on and off until Google Play Billing replaces this (P11).
             if (BuildConfig.DEBUG && ui != null) {
                 GlassCard(Modifier.fillMaxWidth()) {
