@@ -3,6 +3,7 @@ package com.byronhung.firstlight.ui.list
 import android.Manifest
 import android.app.AlarmManager
 import android.app.NotificationManager
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -12,6 +13,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,14 +44,22 @@ private const val EXTRA_SHOW_FRAGMENT_ARGS = ":settings:show_fragment_args"
 /** The Battery row's key on an app's App info page. */
 private const val BATTERY_ROW = "battery"
 
+/** Where we remember the phone maker's own screen, which Android can't check for us. */
+private const val PREFS = "setup"
+private const val LAUNCH_VISITED = "launch_visited"
+private const val LAUNCH_DONE = "launch_done"
+
 /** What the phone must allow before an alarm can reliably ring. Re-read every time the app resumes. */
 data class SetupChecks(
     val notifications: Boolean,
     val fullScreen: Boolean,
     val exactAlarms: Boolean,
     val battery: Boolean,
+    /** The phone maker's own start-up screen has been opened at least once. */
+    val launchVisited: Boolean,
+    /** The user said they finished on that screen (tapped Done). */
+    val launchDone: Boolean,
 ) {
-    val allGood get() = notifications && fullScreen && exactAlarms && battery
 
     companion object {
         fun read(context: Context): SetupChecks {
@@ -61,13 +71,36 @@ data class SetupChecks(
                 fullScreen = Build.VERSION.SDK_INT < 34 || nm.canUseFullScreenIntent(),
                 exactAlarms = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms(),
                 battery = pm.isIgnoringBatteryOptimizations(context.packageName),
+                launchVisited = prefs(context).getBoolean(LAUNCH_VISITED, false),
+                launchDone = prefs(context).getBoolean(LAUNCH_DONE, false),
             )
         }
     }
 }
 
-/** One thing the phone must allow for alarms to ring, and how to ask for it. */
-class SetupItem(val title: String, val why: String, val allowed: Boolean, val ask: () -> Unit)
+private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+/** Opens [intent]; false if this phone has no such screen or won't let us open it. */
+private fun Context.tryStart(intent: Intent): Boolean = try {
+    startActivity(intent)
+    true
+} catch (e: ActivityNotFoundException) {
+    false
+} catch (e: SecurityException) {
+    false
+}
+
+/**
+ * One thing the phone must allow for alarms to ring, and how to ask for it. [confirm] is for
+ * settings Android can't read back: once set, the row offers Done (and Open again) instead of Allow.
+ */
+class SetupItem(
+    val title: String,
+    val why: String,
+    val allowed: Boolean,
+    val confirm: (() -> Unit)? = null,
+    val ask: () -> Unit,
+)
 
 /**
  * Everything the phone must allow, re-read whenever the app comes back to the front (the user
@@ -86,6 +119,8 @@ fun rememberSetupItems(): List<SetupItem> {
         checks = SetupChecks.read(context)
     }
     val pkg = Uri.parse("package:${context.packageName}")
+    val maker = remember { PhoneMaker.from(Build.MANUFACTURER) }
+    val appInfo = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
     return buildList {
         add(
             SetupItem("Allow notifications", "The ringing screen opens through one.", checks.notifications) {
@@ -113,19 +148,54 @@ fun rememberSetupItems(): List<SetupItem> {
                 },
             )
         }
-        add(
-            // Opens App info rather than asking directly: Play restricts the direct-ask permission to a
-            // short list of app types, and alarm clocks aren't clearly on it. The extras ask Settings to
-            // scroll to the Battery row and flash it: Samsung does (checked on One UI), stock Android
-            // ignores them, and either way the page opens.
-            SetupItem("Remove battery limits", "Tap Battery, then Unrestricted. Stops the phone putting First Light to sleep overnight.", checks.battery) {
-                context.startActivity(
-                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
-                        .putExtra(EXTRA_FRAGMENT_ARG_KEY, BATTERY_ROW)
-                        .putExtra(EXTRA_SHOW_FRAGMENT_ARGS, Bundle().apply { putString(EXTRA_FRAGMENT_ARG_KEY, BATTERY_ROW) }),
-                )
-            },
-        )
+        // Opens a settings screen rather than asking directly: Play restricts the direct-ask permission to a
+        // short list of app types, and alarm clocks aren't clearly on it.
+        if (maker == null) {
+            add(
+                // The extras ask Settings to scroll to the Battery row and flash it: Samsung does (checked on
+                // One UI), stock Android ignores them, and either way the page opens.
+                SetupItem("Remove battery limits", "Tap Battery, then Unrestricted. Stops the phone putting First Light to sleep overnight.", checks.battery) {
+                    context.startActivity(
+                        Intent(appInfo)
+                            .putExtra(EXTRA_FRAGMENT_ARG_KEY, BATTERY_ROW)
+                            .putExtra(EXTRA_SHOW_FRAGMENT_ARGS, Bundle().apply { putString(EXTRA_FRAGMENT_ARG_KEY, BATTERY_ROW) }),
+                    )
+                },
+            )
+        } else {
+            // These brands have no Battery row in App info (Honor, checked by a tester), so go to the
+            // standard battery optimization list instead.
+            add(
+                SetupItem("Remove battery limits", maker.batteryHow, checks.battery) {
+                    context.tryStart(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) ||
+                        context.tryStart(appInfo)
+                },
+            )
+            // Their own start-up manager kills alarms even with the above, and nothing tells us its state,
+            // so the user confirms it themselves.
+            val markVisited = {
+                prefs(context).edit().putBoolean(LAUNCH_VISITED, true).apply()
+                checks = SetupChecks.read(context)
+            }
+            add(
+                SetupItem(
+                    title = "Let it start on its own",
+                    why = maker.launchHow,
+                    allowed = checks.launchDone,
+                    ask = {
+                        maker.launchScreens.any { (app, screen) -> context.tryStart(Intent().setClassName(app, screen)) } ||
+                            context.tryStart(appInfo)
+                        markVisited()
+                    },
+                    confirm = if (!checks.launchVisited) null else {
+                        {
+                            prefs(context).edit().putBoolean(LAUNCH_DONE, true).apply()
+                            checks = SetupChecks.read(context)
+                        }
+                    },
+                ),
+            )
+        }
     }
 }
 
@@ -155,8 +225,19 @@ fun SetupRow(item: SetupItem) {
             Text(item.title, style = AppText.bodyStrong, color = sky.ink)
             Text(item.why, style = AppText.caption, color = sky.dim)
         }
-        if (item.allowed) Text("Allowed", style = AppText.bodyStrong, color = sky.sunInk, modifier = Modifier.padding(horizontal = 12.dp))
-        else AmberButton("Allow", item.ask, height = 44.dp)
+        when {
+            item.allowed -> Text("Allowed", style = AppText.bodyStrong, color = sky.sunInk, modifier = Modifier.padding(horizontal = 12.dp))
+            item.confirm != null -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                AmberButton("Done", item.confirm, height = 44.dp)
+                Text(
+                    "Open again",
+                    style = AppText.caption,
+                    color = sky.dim,
+                    modifier = Modifier.clickable(onClick = item.ask).padding(top = 6.dp),
+                )
+            }
+            else -> AmberButton("Allow", item.ask, height = 44.dp)
+        }
     }
 }
 
