@@ -91,8 +91,12 @@ fun AlarmListScreen(
     val nudge by viewModel.nudge.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.checkNudge() }
     var plusReason by remember { mutableStateOf<String?>(null) }
+    // Switching an alarm on needs notifications first; switching one off never does.
+    val whenNotificationsAllowed = rememberNotificationGate("switch the alarm on again")
     AlarmListContent(
-        ui, onAdd, onEdit, viewModel::setEnabled, onHistory, onSettings,
+        ui, onAdd, onEdit,
+        { id, on -> if (on) whenNotificationsAllowed { viewModel.setEnabled(id, true) } else viewModel.setEnabled(id, false) },
+        onHistory, onSettings,
         deletedCount = deleted.size,
         onDelete = viewModel::delete,
         onUndo = viewModel::undoDelete,
