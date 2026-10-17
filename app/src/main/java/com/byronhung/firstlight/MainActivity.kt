@@ -1,5 +1,6 @@
 package com.byronhung.firstlight
 
+import android.content.Intent
 import android.os.Bundle
 import android.text.format.DateFormat
 import androidx.activity.ComponentActivity
@@ -13,6 +14,11 @@ import com.byronhung.firstlight.ui.theme.SkyTheme
 import com.byronhung.firstlight.ui.plus.SkyPreviewScreen
 import com.byronhung.firstlight.ui.welcome.WelcomeScreen
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.byronhung.firstlight.ring.RingActivity
+import com.byronhung.firstlight.ring.RingState
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -55,6 +61,19 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val repository = (application as FirstLightApp).repository
         val is24Hour = DateFormat.is24HourFormat(this)
+
+        // While an alarm rings, opening the app always lands on the ringing screen. If notifications are
+        // off, Android never shows that screen by itself, and this is the only way to reach the puzzles
+        // (a tester's alarm rang with no way to stop it but Force stop).
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                (application as FirstLightApp).ringController.state.collect { state ->
+                    if (state is RingState.Ringing) {
+                        startActivity(Intent(this@MainActivity, RingActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
+            }
+        }
 
         setContent {
             val skyTheme by (application as FirstLightApp).skyTheme.collectAsState()
