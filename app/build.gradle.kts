@@ -21,7 +21,7 @@ android {
         minSdk = 29
         targetSdk = 36
         versionCode = 14
-        versionName = "0.14"
+        versionName = "0.13"
         // Closed test: every tester gets Plus, so the Plus puzzles and skies get real mornings too.
         // Turn off (or delete) when Google Play Billing goes in (P11).
         buildConfigField("boolean", "TEST_PLUS", "true")
