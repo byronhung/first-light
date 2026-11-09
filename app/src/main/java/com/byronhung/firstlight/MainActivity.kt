@@ -82,7 +82,9 @@ class MainActivity : ComponentActivity() {
                 val nav = rememberNavController()
                 // Plus switching on while the app is open (the debug switch now, Play Billing later)
                 // ends on the thank-you screen. The first value is just the app starting up.
-                val isPlus by remember { repository.settings.map { it?.isPlus == true } }.collectAsState(initial = null)
+                // No settings row yet (fresh install) is "unknown", not "no Plus": the welcome creating
+                // the row must not read as a purchase (tester bug: "Set my first alarm" opened the thank-you).
+                val isPlus by remember { repository.settings.map { it?.isPlus } }.collectAsState(initial = null)
                 var hadPlus by remember { mutableStateOf<Boolean?>(null) }
                 LaunchedEffect(isPlus) {
                     val now = isPlus ?: return@LaunchedEffect

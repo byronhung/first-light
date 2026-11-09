@@ -48,10 +48,22 @@ fun PatternPuzzle(level: Int, onMiss: () -> Unit, onSolved: () -> Unit) {
     var misses by remember { mutableIntStateOf(0) }
     var finished by remember { mutableStateOf(false) }
 
+    // A beat of empty grid first, so a half-asleep eye is on the screen before the cells light (tester feedback).
+    var ready by remember { mutableStateOf(true) }
+
     LaunchedEffect(shows) {
+        ready = true
         showing = true
+        delay(LEAD_MS)
+        ready = false
         delay(SHOW_MS)
         showing = false
+    }
+
+    fun showAgain() {
+        if (showing || finished) return
+        picked.clear()
+        shows++
     }
 
     fun tap(index: Int) {
@@ -75,7 +87,13 @@ fun PatternPuzzle(level: Int, onMiss: () -> Unit, onSolved: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        PuzzlePrompt(if (showing) "Remember these" else "Tap the ones that lit up")
+        PuzzlePrompt(
+            when {
+                ready -> "Get ready"
+                showing -> "Remember these"
+                else -> "Tap the ones that lit up"
+            },
+        )
         SquareGrid(
             size = spec.gridSize,
             gap = 10,
@@ -83,7 +101,7 @@ fun PatternPuzzle(level: Int, onMiss: () -> Unit, onSolved: () -> Unit) {
                 .padding(horizontal = 12.dp)
                 .shakeOn(misses),
         ) { i ->
-            val on = (showing && i in spec.lit) || i in picked
+            val on = (showing && !ready && i in spec.lit) || i in picked
             val glow by animateFloatAsState(if (on) 1f else 0f, tween(250), label = "cell")
             Box(
                 Modifier
@@ -101,8 +119,19 @@ fun PatternPuzzle(level: Int, onMiss: () -> Unit, onSolved: () -> Unit) {
             style = AppText.caption.copy(fontSize = AppText.label.fontSize * 1.1f),
             color = Sun.OnGlass.copy(alpha = 0.6f),
         )
+        // Missed it? Show it again (clears your picks; not a miss).
+        Text(
+            "Show again",
+            style = AppText.label,
+            color = Sun.OnGlass.copy(alpha = if (showing || finished) 0f else 0.85f),
+            modifier = Modifier
+                .clip(AppShapes.small)
+                .springClick(0.95f, enabled = !showing && !finished) { showAgain() }
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+        )
         MissNote(misses, text = "Not that one. Watch again.")
     }
 }
 
+private const val LEAD_MS = 1_000L
 private const val SHOW_MS = 2_000L
