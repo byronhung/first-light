@@ -112,7 +112,7 @@ class MainActivity : ComponentActivity() {
                             if (!repository.currentSettings().welcomeDone) nav.navigate("welcome?replay=false")
                         }
                         val vm: AlarmListViewModel = viewModel(
-                            factory = viewModelFactory { initializer { AlarmListViewModel(repository, is24Hour) } },
+                            factory = viewModelFactory { initializer { AlarmListViewModel(repository, is24Hour, billing) } },
                         )
                         AlarmListScreen(
                             viewModel = vm,

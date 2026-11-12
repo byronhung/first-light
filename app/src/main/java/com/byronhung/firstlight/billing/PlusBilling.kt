@@ -16,6 +16,7 @@ import com.android.billingclient.api.QueryPurchasesParams
 import com.byronhung.firstlight.BuildConfig
 import com.byronhung.firstlight.data.AlarmRepository
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -62,13 +63,30 @@ class PlusBilling(
     private val _newPurchase = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val newPurchase: SharedFlow<Unit> = _newPurchase
 
+    private val _synced = MutableStateFlow(false)
+
+    /**
+     * True once Play has answered "what does this account own?" this run and settings match it.
+     * Until then Plus is unknown, so nothing should try to sell it (a reinstall showed the
+     * "three good mornings" popup to someone who'd already bought Plus).
+     */
+    val synced: StateFlow<Boolean> = _synced.asStateFlow()
+
     private var product: ProductDetails? = null
 
     private val client: BillingClient = BillingClient.newBuilder(context.applicationContext)
         .setListener { result, purchases -> onPurchasesUpdated(result, purchases) }
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
-        .enableAutoServiceReconnection()
+        // No enableAutoServiceReconnection(): it raced our own startConnection ("already in the
+        // process of connecting", result 5), the purchase query failed, and a reinstall didn't
+        // restore Plus (0.17). One connection path: refresh() below.
         .build()
+
+    /** A startConnection is in flight; a second one would fail with DEVELOPER_ERROR. */
+    @Volatile private var connecting = false
+
+    /** Failed queries retried so far this run (a fresh install can catch Play still waking up). */
+    @Volatile private var retries = 0
 
     /** Connect, load the price, and sync what's owned. Safe to call repeatedly (each app resume). */
     fun refresh() {
@@ -77,19 +95,24 @@ class PlusBilling(
             syncPurchases()
             return
         }
+        if (connecting) return // The connection in flight will load and sync when it lands.
+        connecting = true
         client.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
+                connecting = false
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     loadProduct()
                     syncPurchases()
                 } else {
                     Log.w(TAG, "Billing setup failed: ${result.responseCode} ${result.debugMessage}")
                     _offer.update { it.copy(available = false) }
+                    retryLater()
                 }
             }
 
             override fun onBillingServiceDisconnected() {
-                // enableAutoServiceReconnection() reconnects on the next call; nothing to do here.
+                // The next refresh() (app resume, opening the offer) connects again.
+                connecting = false
             }
         })
     }
@@ -133,13 +156,22 @@ class PlusBilling(
     private fun syncPurchases() {
         val params = QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
         client.queryPurchasesAsync(params) { result, purchases ->
-            if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryPurchasesAsync
+            if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                // Unknown is not "not owned": change nothing, try again shortly.
+                Log.w(TAG, "Purchase query failed: ${result.responseCode} ${result.debugMessage}")
+                retryLater()
+                return@queryPurchasesAsync
+            }
             val plus = purchases.filter { PRODUCT_ID in it.products }
+            Log.i(TAG, "Play says: ${plus.map { it.purchaseState to it.isAcknowledged }.ifEmpty { "no Plus purchase" }}")
             plus.forEach { handle(it) }
             val owned = plus.any { it.purchaseState == Purchase.PurchaseState.PURCHASED }
             _offer.update { it.copy(owned = owned, pending = !owned && plus.any { p -> p.purchaseState == Purchase.PurchaseState.PENDING }) }
-            // Debug builds keep the Settings debug switch working; release builds follow Play.
-            if (!owned && !BuildConfig.DEBUG) setPlus(false)
+            scope.launch {
+                // Debug builds keep the Settings debug switch working; release builds follow Play.
+                if (owned) writePlus(true) else if (!BuildConfig.DEBUG) writePlus(false)
+                _synced.value = true
+            }
         }
     }
 
@@ -171,11 +203,23 @@ class PlusBilling(
         }
     }
 
-    /** Writes only on a change, so a sync never creates the settings row on a fresh install. */
-    private fun setPlus(on: Boolean) {
+    /** Up to 3 retries per run, a few seconds apart. */
+    private fun retryLater() {
+        if (retries >= 3) return
+        retries++
         scope.launch {
-            if (repository.currentSettings().isPlus != on) repository.setPlus(on)
+            delay(2_000L * retries)
+            refresh()
         }
+    }
+
+    private fun setPlus(on: Boolean) {
+        scope.launch { writePlus(on) }
+    }
+
+    /** Writes only on a change, so a sync never creates the settings row on a fresh install. */
+    private suspend fun writePlus(on: Boolean) {
+        if (repository.currentSettings().isPlus != on) repository.setPlus(on)
     }
 
     companion object {

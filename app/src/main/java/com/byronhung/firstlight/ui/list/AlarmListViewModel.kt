@@ -10,6 +10,8 @@ import com.byronhung.firstlight.alarm.isSkippingNext
 import com.byronhung.firstlight.alarm.period
 import com.byronhung.firstlight.data.Alarm
 import com.byronhung.firstlight.data.AlarmRepository
+import com.byronhung.firstlight.billing.PlusBilling
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.ZoneId
 import kotlinx.coroutines.flow.first
 import com.byronhung.firstlight.ui.plus.PlusNudge
@@ -55,6 +57,7 @@ data class AlarmListUi(
 class AlarmListViewModel(
     private val repository: AlarmRepository,
     private val is24Hour: Boolean,
+    private val billing: PlusBilling,
 ) : ViewModel() {
 
     /**
@@ -108,6 +111,10 @@ class AlarmListViewModel(
     fun checkNudge() {
         if (_nudge.value) return
         viewModelScope.launch {
+            // Never pitch Plus before Play has said whether it's already owned (reinstall, new phone).
+            // No answer in time = unknown = no popup this visit.
+            val forced0 = PlusNudge.forceNextForDebug
+            if (!forced0 && withTimeoutOrNull(8_000) { billing.synced.first { it } } == null) return@launch
             val settings = repository.currentSettings()
             val wakes = repository.recentWakes.first()
             val marks = dayMarks(wakes, ZoneId.systemDefault())
