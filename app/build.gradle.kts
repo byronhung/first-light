@@ -20,11 +20,10 @@ android {
         // 29 (Android 10): every lock-screen and full-screen-alarm API we need exists without fallbacks.
         minSdk = 29
         targetSdk = 36
-        versionCode = 15
-        versionName = "0.15"
-        // Closed test: every tester gets Plus, so the Plus puzzles and skies get real mornings too.
-        // Turn off (or delete) when Google Play Billing goes in (P11).
-        buildConfigField("boolean", "TEST_PLUS", "true")
+        versionCode = 17
+        versionName = "0.17"
+        // Closed test gave every tester Plus. Off since 0.16: Plus is bought through Google Play Billing.
+        buildConfigField("boolean", "TEST_PLUS", "false")
     }
 
     // Release key lives outside the repo; keystore.properties (git-ignored) says where.
@@ -95,6 +94,8 @@ dependencies {
     implementation(libs.mlkit.barcode.scanning)
     // Asks Play services to fetch the barcode model at registration, so 6am works offline.
     implementation(libs.play.services.base)
+    // First Light Plus: one-time purchase through Google Play (billing/PlusBilling.kt).
+    implementation(libs.play.billing)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)

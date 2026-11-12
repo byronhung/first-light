@@ -8,7 +8,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -20,6 +24,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,21 +35,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.byronhung.firstlight.FirstLightApp
 import com.byronhung.firstlight.ui.theme.AppText
 import com.byronhung.firstlight.ui.theme.Sun
 
 /**
- * What tapping something locked opens. Until the offer screen and Google Play Billing exist
- * (chunks P10–P11) it explains Plus and that it isn't on sale yet; it never pretends to sell.
- * [reason] null = hidden.
+ * What tapping something locked opens: what Plus is, Play's real local price, and the buy button
+ * (Google Play Billing, see PlusBilling). When Play can't sell here (no Play, signed out) it says so
+ * instead of showing a button that does nothing. [reason] null = hidden.
  */
 @Composable
 fun BoxScope.PlusSheet(reason: String?, onDismiss: () -> Unit) {
     // Keep the last reason while the sheet animates out.
     var shown by remember { mutableStateOf("") }
     if (reason != null) shown = reason
+    val context = LocalContext.current
+    val billing = (context.applicationContext as FirstLightApp).billing
+    val offer by billing.offer.collectAsState()
+    // Opening the sheet is a good moment to (re)load the price if it isn't there yet.
+    LaunchedEffect(reason != null) { if (reason != null && offer.price == null) billing.refresh() }
+    // Bought: the app moves on to the thank-you screen, so this sheet shouldn't wait behind it.
+    LaunchedEffect(offer.owned) { if (offer.owned && reason != null) onDismiss() }
 
     AnimatedVisibility(reason != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.matchParentSize()) {
         Box(
@@ -84,12 +99,33 @@ fun BoxScope.PlusSheet(reason: String?, onDismiss: () -> Unit) {
                 style = AppText.body.copy(fontSize = 15.sp),
                 color = Sun.OnGlass.copy(alpha = 0.82f),
             )
+            val price = offer.price
             Text(
-                "Not on sale yet. When it is: one payment, no subscription.",
+                when {
+                    offer.pending -> "Your payment is pending. Plus unlocks by itself as soon as it clears."
+                    price != null -> "One payment, no subscription. Comes back on any phone signed in to the same Google account."
+                    offer.available == false -> "Plus can't be bought on this phone right now. Check you're signed in to Google Play."
+                    else -> "Loading the price from Google Play…"
+                },
                 style = AppText.caption,
                 color = Sun.OnGlass.copy(alpha = 0.6f),
             )
-            AmberButton("Got it", onDismiss, Modifier.fillMaxWidth())
+            if (price != null && !offer.pending) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    QuietButton("Not now", onDismiss)
+                    AmberButton("Get Plus · $price", {
+                        context.findActivity()?.let { billing.buy(it) }
+                    }, Modifier.weight(1f))
+                }
+            } else {
+                AmberButton("Got it", onDismiss, Modifier.fillMaxWidth())
+            }
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

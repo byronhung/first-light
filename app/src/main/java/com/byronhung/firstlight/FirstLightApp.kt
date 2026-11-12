@@ -2,6 +2,7 @@ package com.byronhung.firstlight
 
 import android.app.Application
 import com.byronhung.firstlight.alarm.AlarmScheduler
+import com.byronhung.firstlight.billing.PlusBilling
 import com.byronhung.firstlight.alarm.PendingCheckStore
 import com.byronhung.firstlight.data.AlarmRepository
 import com.byronhung.firstlight.data.Backup
@@ -31,6 +32,7 @@ class FirstLightApp : Application() {
     val scheduler: AlarmScheduler by lazy { AlarmScheduler(this) }
     val repository: AlarmRepository by lazy { AlarmRepository(FirstLightDatabase.build(this), scheduler, PendingCheckStore(this)) }
     val ringController: RingController by lazy { RingController(repository, appScope) }
+    val billing: PlusBilling by lazy { PlusBilling(this, repository, appScope) }
 
     /**
      * The chosen sky, kept warm for the whole process: the ringing screen opens on the right theme

@@ -100,8 +100,8 @@ fun BoxScope.PlusNudgeCard(visible: Boolean, onSeePlus: () -> Unit, onNotNow: ()
 
 /**
  * Right after someone gets Plus: thanks, what just unlocked, and a way to the skies. Unsigned,
- * like the popup. For now Plus comes from the debug switch; Google Play Billing (P11) will land
- * here too.
+ * like the popup. Reached on a new Google Play purchase (PlusBilling.newPurchase), never on a
+ * restore; debug builds also reach it from the Settings switch.
  */
 @Composable
 fun ThankYouScreen(onPickSky: () -> Unit) {

@@ -13,6 +13,8 @@ junit = "4.13.2"
 camerax = "1.4.1"
 mlkitBarcode = "18.3.1"
 playServicesBase = "18.5.0"
+# Play requires a recent Billing Library major version for new apps and updates.
+billing = "8.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -35,6 +37,7 @@ androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycl
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 mlkit-barcode-scanning = { group = "com.google.android.gms", name = "play-services-mlkit-barcode-scanning", version.ref = "mlkitBarcode" }
 play-services-base = { group = "com.google.android.gms", name = "play-services-base", version.ref = "playServicesBase" }
+play-billing = { group = "com.android.billingclient", name = "billing", version.ref = "billing" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]

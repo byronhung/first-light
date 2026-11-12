@@ -54,6 +54,8 @@ class MainActivity : ComponentActivity() {
         // A permission granted from the setup card may have made scheduling possible.
         val app = application as FirstLightApp
         app.appScope.launch { app.repository.rescheduleAll() }
+        // Ask Play what's owned: restores Plus on a new phone, unlocks a cash payment that cleared.
+        app.billing.refresh()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,16 +82,20 @@ class MainActivity : ComponentActivity() {
             val appearance by (application as FirstLightApp).appearance.collectAsState()
             FirstLightTheme(skyTheme, appearance) {
                 val nav = rememberNavController()
-                // Plus switching on while the app is open (the debug switch now, Play Billing later)
-                // ends on the thank-you screen. The first value is just the app starting up.
-                // No settings row yet (fresh install) is "unknown", not "no Plus": the welcome creating
-                // the row must not read as a purchase (tester bug: "Set my first alarm" opened the thank-you).
-                val isPlus by remember { repository.settings.map { it?.isPlus } }.collectAsState(initial = null)
-                var hadPlus by remember { mutableStateOf<Boolean?>(null) }
-                LaunchedEffect(isPlus) {
-                    val now = isPlus ?: return@LaunchedEffect
-                    if (hadPlus == false && now) nav.navigate("thanks")
-                    hadPlus = now
+                // A new Plus purchase ends on the thank-you screen. Only a purchase: Plus switching on
+                // by itself is often a restore (reinstall, new phone), which must stay quiet
+                // (0.16 bug: a reinstall showed the thank-you again).
+                val billing = (application as FirstLightApp).billing
+                LaunchedEffect(Unit) { billing.newPurchase.collect { nav.navigate("thanks") } }
+                // Debug builds: the Settings switch has no purchase behind it, so it still uses off → on.
+                if (BuildConfig.DEBUG) {
+                    val isPlus by remember { repository.settings.map { it?.isPlus } }.collectAsState(initial = null)
+                    var hadPlus by remember { mutableStateOf<Boolean?>(null) }
+                    LaunchedEffect(isPlus) {
+                        val now = isPlus ?: return@LaunchedEffect
+                        if (hadPlus == false && now) nav.navigate("thanks")
+                        hadPlus = now
+                    }
                 }
                 NavHost(
                     navController = nav,

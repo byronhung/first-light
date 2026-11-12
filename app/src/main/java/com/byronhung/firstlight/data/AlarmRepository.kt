@@ -54,7 +54,7 @@ class AlarmRepository(
 
     suspend fun setDefaultDifficulty(preset: Preset) = editSettings { it.copy(defaultDifficulty = preset.code) }
 
-    /** Until Google Play Billing exists (chunk P11), only the debug switch in Settings calls this. */
+    /** Called by PlusBilling (Google Play is the source of truth) and the debug switch in debug builds. */
     suspend fun setPlus(on: Boolean) = editSettings { it.copy(isPlus = on) }
 
     suspend fun setTheme(theme: SkyTheme) = editSettings { it.copy(theme = theme.code) }
